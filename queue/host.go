@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/mail"
-	"net/smtp"
 	"net/textproto"
 	"strings"
 	"sync"
@@ -109,42 +108,6 @@ func (h *Host) parseHostname(addr string) (string, error) {
 	return strings.Split(a.Address, "@")[1], nil
 }
 
-// Attempt to connect to the specified server. The connection attempt is
-// performed in a separate goroutine, allowing it to be aborted if the host
-// queue is shut down.
-func (h *Host) tryMailServer(server, hostname string) (*smtp.Client, error) {
-	var (
-		c    *smtp.Client
-		err  error
-		done = make(chan bool)
-	)
-	go func() {
-		c, err = smtp.Dial(fmt.Sprintf("%s:25", server))
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-h.ctx.Done():
-		return nil, h.ctx.Err()
-	}
-	if err != nil {
-		return nil, err
-	}
-	if err := c.Hello(hostname); err != nil {
-		return nil, err
-	}
-	if ok, _ := c.Extension("STARTTLS"); ok {
-		config := &tls.Config{ServerName: server}
-		if h.config.DisableSSLVerification {
-			config.InsecureSkipVerify = true
-		}
-		if err := c.StartTLS(config); err != nil {
-			return nil, err
-		}
-	}
-	return c, nil
-}
-
 type dnsServerFinder struct{}
 
 // FindServers looking for the mail servers for the specified host. MX records are
@@ -234,7 +197,6 @@ func (h *Host) run() {
 		hostname string
 		c        smtputil.Client
 		err      error
-		duration = time.Minute
 	)
 
 	defer func() {
@@ -311,7 +273,7 @@ cleanup:
 	h.back.Reset()
 	goto receive
 wait:
-	duration = h.back.NextBackOff()
+	duration := h.back.NextBackOff()
 	if duration == backoff.Stop {
 		h.log.Error("maximum retry count exceeded")
 		goto cleanup
