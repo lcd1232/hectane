@@ -11,7 +11,6 @@ import (
 	"net/textproto"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -193,10 +192,9 @@ func (h *Host) deliverToMailServer(c smtputil.Client, m *Message) error {
 // sequence of labeled sections.
 func (h *Host) run() {
 	var (
-		m        *Message
-		hostname string
-		c        smtputil.Client
-		err      error
+		m   *Message
+		c   smtputil.Client
+		err error
 	)
 
 	defer func() {
@@ -224,45 +222,8 @@ receive:
 		h.log.WithError(err).Error("failed to process message")
 		goto wait
 	}
-	goto cleanup
-
-deliver:
-	if c == nil {
-		h.log.Debug("connecting to mail server")
-		c, err = h.connectToMailServer(hostname)
-		if c == nil {
-			if err != nil {
-				h.log.Error(err)
-				goto wait
-			} else {
-				return
-			}
-		}
-		h.log.Debug("connection established")
-	}
-	err = h.deliverToMailServer(c, m)
-	if err != nil {
-		h.log.Error(err)
-		if _, ok := err.(syscall.Errno); ok {
-			c = nil
-			goto deliver
-		}
-		if e, ok := err.(*textproto.Error); ok {
-			if e.Code >= 400 && e.Code <= 499 {
-				if closeError := c.Close(); closeError != nil {
-					h.log.WithError(err).Error("close error")
-				}
-				c = nil
-				goto wait
-			}
-			if rstErr := c.Reset(); rstErr != nil {
-				h.log.WithError(err).Error("reset error")
-			}
-		}
-		h.log.Error(err.Error())
-		goto cleanup
-	}
 	h.log.Info("message delivered successfully")
+	goto cleanup
 cleanup:
 	h.log.Debug("deleting message from disk")
 	err = h.storage.DeleteMessage(m)
