@@ -307,6 +307,9 @@ func (h *Host) defaultProcessor(m *Message, s *Storage) error {
 		}
 		return err
 	}
+	if err := c.Quit(); err != nil {
+		h.log.WithError(err).Warning("failed to send quit command")
+	}
 
 	return nil
 }

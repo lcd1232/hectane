@@ -166,6 +166,7 @@ func TestDefaultProcessor(t *testing.T) {
 			assert.Equal(t, "some body1", buf.String())
 		}()
 	}).Return(w, nil)
+	clientMock.On("Quit").Return(nil)
 	smtpConnecterMock := new(smtpmocks.Connecter)
 	smtpConnecterMock.On("SMTPConnect", "mx1.example.com").Return(clientMock, nil)
 
@@ -326,6 +327,7 @@ func TestRun(t *testing.T) {
 						assert.Equal(t, "some body1", buf.String())
 					}()
 				}).Return(w, nil)
+				clientMock.On("Quit").Return(nil)
 				smtpConnecterMock := new(smtpmocks.Connecter)
 				smtpConnecterMock.On("SMTPConnect", "mx1.example.com").Return(clientMock, nil)
 
@@ -403,6 +405,7 @@ func TestRun(t *testing.T) {
 						cancel()
 					}()
 				}).Return(w, nil)
+				clientMock.On("Quit").Return(nil)
 				smtpConnecterMock := new(smtpmocks.Connecter)
 				smtpConnecterMock.On("SMTPConnect", "mx1.example.com").Return(clientMock, nil)
 
