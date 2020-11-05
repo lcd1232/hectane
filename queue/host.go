@@ -61,7 +61,7 @@ type ProcessFunc func(m *Message, s *Storage) error
 
 // Persistent connection to an SMTP host.
 type Host struct {
-	m            sync.Mutex
+	m            sync.RWMutex
 	config       *Config
 	storage      *Storage
 	log          *logrus.Entry
@@ -356,8 +356,8 @@ func (h *Host) Deliver(m *Message) {
 
 // Retrieve the connection idle time.
 func (h *Host) Idle() time.Duration {
-	h.m.Lock()
-	defer h.m.Unlock()
+	h.m.RLock()
+	defer h.m.RUnlock()
 	if h.lastActivity.IsZero() {
 		return 0
 	}
