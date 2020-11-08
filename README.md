@@ -1,9 +1,11 @@
 ## Hectane
 
-[![Build Status - Linux](https://travis-ci.org/hectane/hectane.svg)](https://travis-ci.org/hectane/hectane)
-[![Build status - Windows](https://ci.appveyor.com/api/projects/status/h3r46k12llvw18u6?svg=true)](https://ci.appveyor.com/project/nathan-osman/hectane)
-[![GoDoc](https://godoc.org/github.com/hectane/hectane?status.svg)](https://godoc.org/github.com/hectane/hectane)
-[![MIT License](http://img.shields.io/badge/license-MIT-9370d8.svg?style=flat)](http://opensource.org/licenses/MIT)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lcd1232/hectane)](https://goreportcard.com/report/github.com/lcd1232/hectane)
+[![Build Status](https://img.shields.io/github/workflow/status/lcd1232/hectane/test)](https://github.com/lcd1232/hectane/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/lcd1232/hectane)](https://codecov.io/gh/lcd1232/hectane)
+[![Godoc](http://img.shields.io/badge/go-documentation-blue.svg)](https://pkg.go.dev/github.com/lcd1232/hectane)
+[![Releases](https://img.shields.io/github/v/tag/lcd1232/hectane.svg)](https://github.com/lcd1232/hectane/releases)
+[![LICENSE](https://img.shields.io/github/license/lcd1232/hectane.svg)](https://github.com/lcd1232/hectane/blob/master/LICENSE)
 
 Hectane is both a Go package providing an SMTP queue for sending emails and a standalone application that exposes this functionality via an HTTP API.
 
