@@ -19,8 +19,8 @@ const (
 
 // Message metadata.
 type Message struct {
-	ID      string   `json:"id"`
-	Body    string   `json:"Body"`
+	id      string
+	body    string
 	Host    string   `json:"host"`
 	From    string   `json:"from"`
 	To      []string `json:"to"`
@@ -46,7 +46,7 @@ func (s *Storage) bodyFilename(body string) string {
 
 // Determine the filename of the specified message.
 func (s *Storage) messageFilename(m *Message) string {
-	return path.Join(s.directory, m.Body, m.ID) + messageExtension
+	return path.Join(s.directory, m.body, m.id) + messageExtension
 }
 
 // Load all messages with the specified body.
@@ -56,8 +56,8 @@ func (s *Storage) loadMessages(body string) []*Message {
 		for _, f := range files {
 			if strings.HasSuffix(f.Name(), messageExtension) {
 				m := &Message{
-					ID:   strings.TrimSuffix(f.Name(), messageExtension),
-					Body: body,
+					id:   strings.TrimSuffix(f.Name(), messageExtension),
+					body: body,
 				}
 				if r, err := os.Open(s.messageFilename(m)); err == nil {
 					if err := json.NewDecoder(r).Decode(m); err == nil {
@@ -117,10 +117,10 @@ func (s *Storage) LoadMessages() ([]*Message, error) {
 func (s *Storage) SaveMessage(m *Message, body string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
-	if m.ID == "" {
-		m.ID = uuid.New()
+	if m.id == "" {
+		m.id = uuid.New()
 	}
-	m.Body = body
+	m.body = body
 	w, err := os.OpenFile(s.messageFilename(m), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (s *Storage) SaveMessage(m *Message, body string) error {
 func (s *Storage) GetMessageBody(m *Message) (io.ReadCloser, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
-	return os.Open(s.bodyFilename(m.Body))
+	return os.Open(s.bodyFilename(m.body))
 }
 
 // Delete the specified message. The message body is also deleted if no more
@@ -147,7 +147,7 @@ func (s *Storage) DeleteMessage(m *Message) error {
 	if err := os.Remove(s.messageFilename(m)); err != nil {
 		return err
 	}
-	d, err := os.Open(s.bodyDirectory(m.Body))
+	d, err := os.Open(s.bodyDirectory(m.body))
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (s *Storage) DeleteMessage(m *Message) error {
 		return err
 	}
 	if len(e) == 1 {
-		return os.RemoveAll(s.bodyDirectory(m.Body))
+		return os.RemoveAll(s.bodyDirectory(m.body))
 	}
 	return nil
 }

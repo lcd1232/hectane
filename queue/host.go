@@ -235,7 +235,7 @@ wait:
 	}
 	duration := h.back.ForAttempt(float64(m.Attempt))
 	h.deliver(m, duration)
-	if err := h.storage.SaveMessage(m, m.Body); err != nil {
+	if err := h.storage.SaveMessage(m, m.body); err != nil {
 		h.log.WithError(err).Error("failed to save message before retry")
 	}
 	goto receive

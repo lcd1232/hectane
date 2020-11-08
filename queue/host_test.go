@@ -66,13 +66,13 @@ func TestHost_receiveMessage(t *testing.T) {
 	require.True(t, h.lastActivity.IsZero())
 
 	h.newMessage.Insert(&Message{
-		ID: "1",
+		id: "1",
 	}, 0)
 
 	m := h.receiveMessage()
 
 	assert.True(t, h.lastActivity.IsZero())
-	assert.Equal(t, "1", m.ID)
+	assert.Equal(t, "1", m.id)
 
 	h.Stop()
 	assert.Nil(t, h.receiveMessage())
