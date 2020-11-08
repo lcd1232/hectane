@@ -66,13 +66,13 @@ func TestHost_receiveMessage(t *testing.T) {
 	require.True(t, h.lastActivity.IsZero())
 
 	h.newMessage.Insert(&Message{
-		id: "1",
+		ID: "1",
 	}, 0)
 
 	m := h.receiveMessage()
 
 	assert.True(t, h.lastActivity.IsZero())
-	assert.Equal(t, "1", m.id)
+	assert.Equal(t, "1", m.ID)
 
 	h.Stop()
 	assert.Nil(t, h.receiveMessage())
@@ -423,7 +423,7 @@ func TestRun(t *testing.T) {
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
-						MaxElapsedTime:         time.Hour,
+						MaxAttempts:            10,
 					},
 					back: &backoff.Backoff{},
 				}
@@ -476,7 +476,7 @@ func TestRun(t *testing.T) {
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
-						MaxElapsedTime:         time.Hour,
+						MaxAttempts:            10,
 					},
 					back: &backoff.Backoff{},
 				}
@@ -548,7 +548,7 @@ func TestRun(t *testing.T) {
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
-						MaxElapsedTime:         time.Hour,
+						MaxAttempts:            10,
 					},
 					back: &backoff.Backoff{
 						Min: time.Minute,

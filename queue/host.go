@@ -226,17 +226,16 @@ cleanup:
 	if err := h.storage.DeleteMessage(m); err != nil {
 		h.log.WithError(err).Error("failed to delete message")
 	}
-	h.back.Reset()
 	goto receive
 wait:
-	m.attempt++
-	duration := h.back.ForAttempt(float64(m.attempt))
-	if duration >= h.config.MaxElapsedTime {
+	m.Attempt++
+	if m.Attempt >= h.config.MaxAttempts {
 		h.log.Error("maximum retry count exceeded")
 		goto cleanup
 	}
+	duration := h.back.ForAttempt(float64(m.Attempt))
 	h.deliver(m, duration)
-	if err := h.storage.SaveMessage(m, m.body); err != nil {
+	if err := h.storage.SaveMessage(m, m.Body); err != nil {
 		h.log.WithError(err).Error("failed to save message before retry")
 	}
 	goto receive
