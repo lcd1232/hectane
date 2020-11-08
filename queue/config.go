@@ -20,6 +20,7 @@ type Config struct {
 	Multiplier             float64       `json:"multiplier"`
 	MaxInterval            time.Duration `json:"-"`
 	MaxElapsedTime         time.Duration `json:"-"`
+	Jitter                 bool          `json:"jitter"`
 
 	// Map domain names to DKIM config for that domain
 	DKIMConfigs map[string]DKIMConfig `json:"dkim-configs"`

@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/jpillora/backoff"
 	"github.com/lcd1232/dqueue"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -348,7 +348,7 @@ func TestRun(t *testing.T) {
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
 					},
-					back: &backoff.ZeroBackOff{},
+					back: &backoff.Backoff{},
 				}
 				h.process = h.defaultProcessor
 
@@ -423,8 +423,9 @@ func TestRun(t *testing.T) {
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
+						MaxElapsedTime:         time.Hour,
 					},
-					back: &backoff.ZeroBackOff{},
+					back: &backoff.Backoff{},
 				}
 				h.process = h.defaultProcessor
 
@@ -475,8 +476,9 @@ func TestRun(t *testing.T) {
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
+						MaxElapsedTime:         time.Hour,
 					},
-					back: &backoff.ZeroBackOff{},
+					back: &backoff.Backoff{},
 				}
 				h.process = h.defaultProcessor
 
@@ -546,8 +548,9 @@ func TestRun(t *testing.T) {
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
+						MaxElapsedTime:         time.Hour,
 					},
-					back: backoff.NewExponentialBackOff(),
+					back: &backoff.Backoff{},
 				}
 				h.process = h.defaultProcessor
 

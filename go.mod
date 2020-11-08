@@ -8,8 +8,8 @@ require (
 	github.com/hectane/go-acl v0.0.0-20190604041725-da78bae5fc95
 	github.com/hectane/go-asyncserver v0.1.0
 	github.com/hectane/go-attest v0.1.2
-	github.com/hectane/go-nonblockingchan v0.1.0
 	github.com/hectane/go-smtpsrv v0.0.0-20161026181416-2bd6a60e2610
+	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/lcd1232/dqueue v1.2.0

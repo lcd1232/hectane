@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/jpillora/backoff"
 	"github.com/lcd1232/dqueue"
 	"github.com/sirupsen/logrus"
 
@@ -74,7 +74,7 @@ type Host struct {
 
 	mailServerFinder MailServerFinder
 	smtpConnecter    smtputil.Connecter
-	back             backoff.BackOff
+	back             *backoff.Backoff
 }
 
 // Receive the next message in the queue. The host queue is considered
@@ -192,9 +192,8 @@ func (h *Host) deliverToMailServer(c smtputil.Client, m *Message) error {
 // sequence of labeled sections.
 func (h *Host) run() {
 	var (
-		m   *Message
-		c   smtputil.Client
-		err error
+		m *Message
+		c smtputil.Client
 	)
 
 	defer func() {
@@ -224,19 +223,22 @@ receive:
 	goto cleanup
 cleanup:
 	h.log.Debug("deleting message from disk")
-	err = h.storage.DeleteMessage(m)
-	if err != nil {
-		h.log.Error(err.Error())
+	if err := h.storage.DeleteMessage(m); err != nil {
+		h.log.WithError(err).Error("failed to delete message")
 	}
 	h.back.Reset()
 	goto receive
 wait:
-	duration := h.back.NextBackOff()
-	if duration == backoff.Stop {
+	m.attempt++
+	duration := h.back.ForAttempt(float64(m.attempt))
+	if duration >= h.config.MaxElapsedTime {
 		h.log.Error("maximum retry count exceeded")
 		goto cleanup
 	}
 	h.deliver(m, duration)
+	if err := h.storage.SaveMessage(m, m.body); err != nil {
+		h.log.WithError(err).Error("failed to save message before retry")
+	}
 	goto receive
 }
 
@@ -273,12 +275,12 @@ func (h *Host) defaultProcessor(m *Message, s *Storage) error {
 func NewHost(host string, s *Storage, c *Config) *Host {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	back := backoff.NewExponentialBackOff()
-	back.InitialInterval = c.InitialInterval
-	back.MaxElapsedTime = c.MaxElapsedTime
-	back.MaxInterval = c.MaxInterval
-	back.Multiplier = c.Multiplier
-	back.RandomizationFactor = c.RandomizationFactor
+	back := backoff.Backoff{
+		Factor: c.Multiplier,
+		Jitter: c.Jitter,
+		Min:    c.InitialInterval,
+		Max:    c.MaxInterval,
+	}
 
 	h := &Host{
 		config:           c,
@@ -292,7 +294,7 @@ func NewHost(host string, s *Storage, c *Config) *Host {
 		process:          c.ProcessFunc,
 		mailServerFinder: &dnsServerFinder{},
 		smtpConnecter:    newConnector(ctx, c.Hostname, c.DisableSSLVerification),
-		back:             back,
+		back:             &back,
 	}
 	if h.process == nil {
 		h.process = h.defaultProcessor
