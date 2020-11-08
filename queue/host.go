@@ -228,7 +228,6 @@ cleanup:
 	if err != nil {
 		h.log.Error(err.Error())
 	}
-	m = nil
 	h.back.Reset()
 	goto receive
 wait:
