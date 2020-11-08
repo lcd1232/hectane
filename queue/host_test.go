@@ -550,7 +550,9 @@ func TestRun(t *testing.T) {
 						DisableSSLVerification: true,
 						MaxElapsedTime:         time.Hour,
 					},
-					back: &backoff.Backoff{},
+					back: &backoff.Backoff{
+						Min: time.Minute,
+					},
 				}
 				h.process = h.defaultProcessor
 
