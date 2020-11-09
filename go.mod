@@ -11,7 +11,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kennygrant/sanitize v1.2.4
-	github.com/lcd1232/dqueue v1.2.0
+	github.com/lcd1232/dqueue v1.2.1
 	github.com/pborman/uuid v1.2.0
 	github.com/sirupsen/logrus v1.5.0
 	github.com/stretchr/objx v0.3.0 // indirect
