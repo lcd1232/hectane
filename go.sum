@@ -21,8 +21,8 @@ github.com/kennygrant/sanitize v1.2.4 h1:gN25/otpP5vAsO2djbMhF/LQX6R7+O1TB4yv8Nz
 github.com/kennygrant/sanitize v1.2.4/go.mod h1:LGsjYYtgxbetdg5owWB2mpgUL6e2nfw2eObZ0u0qvak=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1 h1:mweAR1A6xJ3oS2pRaGiHgQ4OO8tzTaLawm8vnODuwDk=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
-github.com/lcd1232/dqueue v1.2.0 h1:y/lSM1Yg0J3S0zNMXYyn55NBUqENCQOB+kabKPvVq6U=
-github.com/lcd1232/dqueue v1.2.0/go.mod h1:b/pYoWD2DscPIStb7m7a5ADpKH0u5bsruxP566Lk+84=
+github.com/lcd1232/dqueue v1.2.1 h1:crsBcoQDpbHAq8qQ41AcQmwPO72+0fbh0SHZIIbxH/k=
+github.com/lcd1232/dqueue v1.2.1/go.mod h1:b/pYoWD2DscPIStb7m7a5ADpKH0u5bsruxP566Lk+84=
 github.com/pborman/uuid v1.2.0 h1:J7Q5mO4ysT1dv8hyrUGHb9+ooztCXu1D8MY8DZYsu3g=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
