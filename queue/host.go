@@ -209,7 +209,7 @@ receive:
 	if m == nil {
 		return
 	}
-	logger := h.log.WithField("from", m.From)
+	logger := h.log.WithField("id", m.id)
 	logger.Info("message received in queue")
 	if err := h.process(m, h.storage); err != nil {
 		var smtpErr *SMTPError
@@ -235,7 +235,7 @@ wait:
 		goto cleanup
 	}
 	duration := h.back.ForAttempt(float64(m.Attempt))
-	logger.Infof("redeliver message with duration %s", duration)
+	logger.WithField("duration", duration).Infof("redeliver message")
 	h.deliver(m, duration)
 	if err := h.storage.SaveMessage(m, m.body); err != nil {
 		logger.WithError(err).Error("failed to save message before retry")
