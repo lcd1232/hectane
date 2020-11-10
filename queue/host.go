@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
-	"github.com/hectane/go-nonblockingchan"
+	"github.com/jpillora/backoff"
+	"github.com/lcd1232/dqueue"
 	"github.com/sirupsen/logrus"
 
 	"github.com/hectane/hectane/internal/smtputil"
@@ -65,7 +65,7 @@ type Host struct {
 	storage      *Storage
 	log          *logrus.Entry
 	host         string
-	newMessage   *nbc.NonBlockingChan
+	newMessage   *dqueue.Queue
 	lastActivity time.Time
 	ctx          context.Context
 	stopFunc     context.CancelFunc
@@ -74,7 +74,7 @@ type Host struct {
 
 	mailServerFinder MailServerFinder
 	smtpConnecter    smtputil.Connecter
-	back             backoff.BackOff
+	back             *backoff.Backoff
 }
 
 // Receive the next message in the queue. The host queue is considered
@@ -91,7 +91,7 @@ func (h *Host) receiveMessage() *Message {
 		h.m.Unlock()
 	}()
 	select {
-	case m := <-h.newMessage.Recv:
+	case m := <-h.newMessage.Channel():
 		return m.(*Message)
 	case <-h.ctx.Done():
 		return nil
@@ -192,9 +192,8 @@ func (h *Host) deliverToMailServer(c smtputil.Client, m *Message) error {
 // sequence of labeled sections.
 func (h *Host) run() {
 	var (
-		m   *Message
-		c   smtputil.Client
-		err error
+		m *Message
+		c smtputil.Client
 	)
 
 	defer func() {
@@ -206,13 +205,12 @@ func (h *Host) run() {
 	}()
 
 receive:
+	m = h.receiveMessage()
 	if m == nil {
-		m = h.receiveMessage()
-		if m == nil {
-			return
-		}
-		h.log.Info("message received in queue")
+		return
 	}
+	logger := h.log.WithField("id", m.id)
+	logger.Info("message received in queue")
 	if err := h.process(m, h.storage); err != nil {
 		var smtpErr *SMTPError
 		if errors.As(err, &smtpErr) && smtpErr.IsPermanent() {
@@ -222,28 +220,27 @@ receive:
 		h.log.WithError(err).Error("failed to process message")
 		goto wait
 	}
-	h.log.Info("message delivered successfully")
+	logger.Info("message delivered successfully")
 	goto cleanup
 cleanup:
-	h.log.Debug("deleting message from disk")
-	err = h.storage.DeleteMessage(m)
-	if err != nil {
-		h.log.Error(err.Error())
+	logger.Debug("deleting message from disk")
+	if err := h.storage.DeleteMessage(m); err != nil {
+		h.log.WithError(err).Error("failed to delete message")
 	}
-	m = nil
-	h.back.Reset()
 	goto receive
 wait:
-	duration := h.back.NextBackOff()
-	if duration == backoff.Stop {
-		h.log.Error("maximum retry count exceeded")
+	m.Attempt++
+	if m.Attempt >= h.config.MaxAttempts {
+		logger.Error("maximum retry count exceeded")
 		goto cleanup
 	}
-	select {
-	case <-h.ctx.Done():
-	case <-time.After(duration):
-		goto receive
+	duration := h.back.ForAttempt(float64(m.Attempt))
+	logger.WithField("duration", duration).Infof("redeliver message")
+	h.deliver(m, duration)
+	if err := h.storage.SaveMessage(m, m.body); err != nil {
+		logger.WithError(err).Error("failed to save message before retry")
 	}
+	goto receive
 }
 
 func (h *Host) defaultProcessor(m *Message, s *Storage) error {
@@ -279,26 +276,26 @@ func (h *Host) defaultProcessor(m *Message, s *Storage) error {
 func NewHost(host string, s *Storage, c *Config) *Host {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	back := backoff.NewExponentialBackOff()
-	back.InitialInterval = c.InitialInterval
-	back.MaxElapsedTime = c.MaxElapsedTime
-	back.MaxInterval = c.MaxInterval
-	back.Multiplier = c.Multiplier
-	back.RandomizationFactor = c.RandomizationFactor
+	back := backoff.Backoff{
+		Factor: c.Multiplier,
+		Jitter: c.Jitter,
+		Min:    c.InitialInterval,
+		Max:    c.MaxInterval,
+	}
 
 	h := &Host{
 		config:           c,
 		storage:          s,
 		log:              logrus.WithField("context", host),
 		host:             host,
-		newMessage:       nbc.New(),
+		newMessage:       dqueue.NewQueue(),
 		ctx:              ctx,
 		stopFunc:         cancel,
 		wg:               &sync.WaitGroup{},
 		process:          c.ProcessFunc,
 		mailServerFinder: &dnsServerFinder{},
 		smtpConnecter:    newConnector(ctx, c.Hostname, c.DisableSSLVerification),
-		back:             back,
+		back:             &back,
 	}
 	if h.process == nil {
 		h.process = h.defaultProcessor
@@ -312,7 +309,11 @@ func NewHost(host string, s *Storage, c *Config) *Host {
 
 // Attempt to deliver a message to the host.
 func (h *Host) Deliver(m *Message) {
-	h.newMessage.Send <- m
+	h.deliver(m, 0)
+}
+
+func (h *Host) deliver(m *Message, delay time.Duration) {
+	h.newMessage.Insert(m, delay)
 }
 
 // Retrieve the connection idle time.
@@ -329,7 +330,7 @@ func (h *Host) Idle() time.Duration {
 func (h *Host) Status() *HostStatus {
 	return &HostStatus{
 		Active: h.Idle() == 0,
-		Length: h.newMessage.Len(),
+		Length: h.newMessage.Length(),
 	}
 }
 

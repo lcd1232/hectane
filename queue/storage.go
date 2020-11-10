@@ -19,11 +19,12 @@ const (
 
 // Message metadata.
 type Message struct {
-	id   string
-	body string
-	Host string
-	From string
-	To   []string
+	id      string
+	body    string
+	Host    string   `json:"host"`
+	From    string   `json:"from"`
+	To      []string `json:"to"`
+	Attempt int      `json:"attempt"`
 }
 
 // Manager for message metadata and body on disk. All methods are safe to call
@@ -116,7 +117,9 @@ func (s *Storage) LoadMessages() ([]*Message, error) {
 func (s *Storage) SaveMessage(m *Message, body string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
-	m.id = uuid.New()
+	if m.id == "" {
+		m.id = uuid.New()
+	}
 	m.body = body
 	w, err := os.OpenFile(s.messageFilename(m), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {

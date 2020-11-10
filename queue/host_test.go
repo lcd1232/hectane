@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
-	nbc "github.com/hectane/go-nonblockingchan"
+	"github.com/jpillora/backoff"
+	"github.com/lcd1232/dqueue"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -65,9 +65,9 @@ func TestHost_receiveMessage(t *testing.T) {
 
 	require.True(t, h.lastActivity.IsZero())
 
-	h.newMessage.Send <- &Message{
+	h.newMessage.Insert(&Message{
 		id: "1",
-	}
+	}, 0)
 
 	m := h.receiveMessage()
 
@@ -341,20 +341,20 @@ func TestRun(t *testing.T) {
 					log:              logrus.NewEntry(logrus.StandardLogger()),
 					storage:          storage,
 					wg:               &hostWg,
-					newMessage:       nbc.New(),
+					newMessage:       dqueue.NewQueue(),
 					mailServerFinder: mailServerFinderMock,
 					smtpConnecter:    smtpConnecterMock,
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
 					},
-					back: &backoff.ZeroBackOff{},
+					back: &backoff.Backoff{},
 				}
 				h.process = h.defaultProcessor
 
 				message := saveMessage(t, "some body1", h.storage, "from@example.org", []string{"to@example.com"})
 
-				h.newMessage.Send <- message
+				h.newMessage.Insert(message, 0)
 
 				go func() {
 					time.Sleep(100 * time.Millisecond)
@@ -417,20 +417,21 @@ func TestRun(t *testing.T) {
 					log:              logrus.NewEntry(logrus.StandardLogger()),
 					storage:          storage,
 					wg:               &hostWg,
-					newMessage:       nbc.New(),
+					newMessage:       dqueue.NewQueue(),
 					mailServerFinder: mailServerFinderMock,
 					smtpConnecter:    smtpConnecterMock,
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
+						MaxAttempts:            10,
 					},
-					back: &backoff.ZeroBackOff{},
+					back: &backoff.Backoff{},
 				}
 				h.process = h.defaultProcessor
 
 				message := saveMessage(t, "some body1", h.storage, "from@example.org", []string{"to@example.com"})
 
-				h.newMessage.Send <- message
+				h.newMessage.Insert(message, 0)
 
 				return &h, func() {
 					deleter()
@@ -469,20 +470,98 @@ func TestRun(t *testing.T) {
 					log:              logrus.NewEntry(logrus.StandardLogger()),
 					storage:          storage,
 					wg:               &hostWg,
-					newMessage:       nbc.New(),
+					newMessage:       dqueue.NewQueue(),
 					mailServerFinder: mailServerFinderMock,
 					smtpConnecter:    smtpConnecterMock,
 					config: &Config{
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
+						MaxAttempts:            10,
 					},
-					back: &backoff.ZeroBackOff{},
+					back: &backoff.Backoff{},
 				}
 				h.process = h.defaultProcessor
 
 				message := saveMessage(t, "some body1", h.storage, "from@example.org", []string{"to@example.com"})
 
-				h.newMessage.Send <- message
+				h.newMessage.Insert(message, 0)
+
+				return &h, func() {
+					deleter()
+					smtpConnecterMock.AssertExpectations(t)
+					clientMock.AssertExpectations(t)
+					mailServerFinderMock.AssertExpectations(t)
+				}
+			},
+		},
+		{
+			name: "failed send first email and success second one",
+			beforeTest: func(t *testing.T) (*Host, func()) {
+				r, w := io.Pipe()
+				ctx, cancel := context.WithCancel(context.Background())
+				permanentError := textproto.Error{
+					Msg:  "Try again",
+					Code: 400,
+				}
+
+				mailServerFinderMock := new(queuemocks.MailServerFinder)
+				mailServerFinderMock.On("FindServers", "example.com").Return([]string{"mx1.example.com", "mx2.example.com"}, nil)
+				clientMock := new(smtpmocks.Client)
+				clientMock.On("Hello", "forwarder1.example.org").Run(func(args mock.Arguments) {
+					go func() {
+						time.Sleep(10 * time.Second)
+						cancel()
+					}()
+				}).Return(&permanentError).Once()
+				clientMock.On("Hello", "forwarder1.example.org").Return(nil)
+				clientMock.On("Extension", "STARTTLS").Return(true, "")
+				clientMock.On("StartTLS", mock.MatchedBy(func(conf *tls.Config) bool {
+					assert.Equal(t, "mx1.example.com", conf.ServerName)
+					assert.Equal(t, true, conf.InsecureSkipVerify)
+					return true
+				})).Return(nil)
+				clientMock.On("Mail", "from2@example.org").Return(nil)
+				clientMock.On("Rcpt", "to2@example.com").Return(nil)
+				clientMock.On("Data").Run(func(args mock.Arguments) {
+					go func() {
+						buf := bytes.Buffer{}
+						_, err := io.Copy(&buf, r)
+						require.NoError(t, err)
+						assert.Equal(t, "some body2", buf.String())
+					}()
+				}).Return(w, nil)
+				clientMock.On("Quit").Return(nil)
+				smtpConnecterMock := new(smtpmocks.Connecter)
+				smtpConnecterMock.On("SMTPConnect", "mx1.example.com").Return(clientMock, nil)
+
+				storage, deleter := newStorage(t)
+				hostWg := sync.WaitGroup{}
+				hostWg.Add(1)
+				h := Host{
+					ctx:              ctx,
+					log:              logrus.NewEntry(logrus.StandardLogger()),
+					storage:          storage,
+					wg:               &hostWg,
+					newMessage:       dqueue.NewQueue(),
+					mailServerFinder: mailServerFinderMock,
+					smtpConnecter:    smtpConnecterMock,
+					config: &Config{
+						Hostname:               "forwarder1.example.org",
+						DisableSSLVerification: true,
+						MaxAttempts:            10,
+					},
+					back: &backoff.Backoff{
+						Min: time.Minute,
+						Max: 2 * time.Hour,
+					},
+				}
+				h.process = h.defaultProcessor
+
+				message1 := saveMessage(t, "some body1", h.storage, "from1@example.org", []string{"to1@example.com"})
+				message2 := saveMessage(t, "some body2", h.storage, "from2@example.org", []string{"to2@example.com"})
+
+				h.newMessage.Insert(message1, time.Second)
+				h.newMessage.Insert(message2, 3*time.Second)
 
 				return &h, func() {
 					deleter()
