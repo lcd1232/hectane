@@ -337,5 +337,6 @@ func (h *Host) Status() *HostStatus {
 // Close the connection to the host.
 func (h *Host) Stop() {
 	h.stopFunc()
+	_ = h.newMessage.Stop(h.ctx)
 	h.wg.Wait()
 }
