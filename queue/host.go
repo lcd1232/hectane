@@ -235,6 +235,7 @@ wait:
 		goto cleanup
 	}
 	duration := h.back.ForAttempt(float64(m.Attempt))
+	logger.Infof("redeliver message with duration %s", duration)
 	h.deliver(m, duration)
 	if err := h.storage.SaveMessage(m, m.body); err != nil {
 		logger.WithError(err).Error("failed to save message before retry")
