@@ -209,7 +209,8 @@ receive:
 	if m == nil {
 		return
 	}
-	h.log.Info("message received in queue")
+	logger := h.log.WithField("from", m.From)
+	logger.Info("message received in queue")
 	if err := h.process(m, h.storage); err != nil {
 		var smtpErr *SMTPError
 		if errors.As(err, &smtpErr) && smtpErr.IsPermanent() {
@@ -219,10 +220,10 @@ receive:
 		h.log.WithError(err).Error("failed to process message")
 		goto wait
 	}
-	h.log.Info("message delivered successfully")
+	logger.Info("message delivered successfully")
 	goto cleanup
 cleanup:
-	h.log.Debug("deleting message from disk")
+	logger.Debug("deleting message from disk")
 	if err := h.storage.DeleteMessage(m); err != nil {
 		h.log.WithError(err).Error("failed to delete message")
 	}
@@ -230,13 +231,13 @@ cleanup:
 wait:
 	m.Attempt++
 	if m.Attempt >= h.config.MaxAttempts {
-		h.log.Error("maximum retry count exceeded")
+		logger.Error("maximum retry count exceeded")
 		goto cleanup
 	}
 	duration := h.back.ForAttempt(float64(m.Attempt))
 	h.deliver(m, duration)
 	if err := h.storage.SaveMessage(m, m.body); err != nil {
-		h.log.WithError(err).Error("failed to save message before retry")
+		logger.WithError(err).Error("failed to save message before retry")
 	}
 	goto receive
 }
