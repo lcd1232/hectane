@@ -509,7 +509,7 @@ func TestRun(t *testing.T) {
 				clientMock := new(smtpmocks.Client)
 				clientMock.On("Hello", "forwarder1.example.org").Run(func(args mock.Arguments) {
 					go func() {
-						time.Sleep(100 * time.Millisecond)
+						time.Sleep(10 * time.Second)
 						cancel()
 					}()
 				}).Return(&permanentError).Once()
