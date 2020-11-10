@@ -552,6 +552,7 @@ func TestRun(t *testing.T) {
 					},
 					back: &backoff.Backoff{
 						Min: time.Minute,
+						Max: 2 * time.Hour,
 					},
 				}
 				h.process = h.defaultProcessor
