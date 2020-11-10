@@ -1,4 +1,4 @@
-module github.com/hectane/hectane
+module github.com/lcd1232/hectane
 
 go 1.14
 
