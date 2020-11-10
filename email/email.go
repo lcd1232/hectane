@@ -1,8 +1,8 @@
 package email
 
 import (
-	"github.com/hectane/hectane/queue"
 	"github.com/kennygrant/sanitize"
+	"github.com/lcd1232/hectane/queue"
 
 	"bytes"
 	"fmt"

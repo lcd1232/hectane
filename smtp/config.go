@@ -2,7 +2,7 @@ package smtp
 
 import (
 	"github.com/hectane/go-smtpsrv"
-	"github.com/hectane/hectane/version"
+	"github.com/lcd1232/hectane/version"
 
 	"time"
 )

@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/hectane/hectane/email"
-	"github.com/hectane/hectane/version"
+	"github.com/lcd1232/hectane/email"
+	"github.com/lcd1232/hectane/version"
 
 	"encoding/json"
 	"net/http"

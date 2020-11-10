@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/hectane/go-asyncserver"
-	"github.com/hectane/hectane/queue"
+	"github.com/lcd1232/hectane/queue"
 	"github.com/sirupsen/logrus"
 
 	"crypto/tls"

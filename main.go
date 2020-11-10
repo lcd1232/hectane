@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/hectane/hectane/api"
-	"github.com/hectane/hectane/cfg"
-	"github.com/hectane/hectane/cmd"
-	"github.com/hectane/hectane/exec"
-	"github.com/hectane/hectane/log"
-	"github.com/hectane/hectane/queue"
-	"github.com/hectane/hectane/smtp"
+	"github.com/lcd1232/hectane/api"
+	"github.com/lcd1232/hectane/cfg"
+	"github.com/lcd1232/hectane/cmd"
+	"github.com/lcd1232/hectane/exec"
+	"github.com/lcd1232/hectane/log"
+	"github.com/lcd1232/hectane/queue"
+	"github.com/lcd1232/hectane/smtp"
 
 	"errors"
 	"flag"

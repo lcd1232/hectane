@@ -1,10 +1,10 @@
 package smtp
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/hectane/go-smtpsrv"
-	"github.com/hectane/hectane/email"
-	"github.com/hectane/hectane/queue"
+	"github.com/lcd1232/hectane/email"
+	"github.com/lcd1232/hectane/queue"
+	"github.com/sirupsen/logrus"
 )
 
 // Server awaits incoming connections and delivers them to the mail queue.

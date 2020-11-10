@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/hectane/hectane/internal/mocks/queuemocks"
-	"github.com/hectane/hectane/internal/mocks/smtpmocks"
+	"github.com/lcd1232/hectane/internal/mocks/queuemocks"
+	"github.com/lcd1232/hectane/internal/mocks/smtpmocks"
 )
 
 func newStorage(t *testing.T) (storage *Storage, deleter func()) {

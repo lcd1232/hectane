@@ -17,7 +17,7 @@ import (
 	"github.com/lcd1232/dqueue"
 	"github.com/sirupsen/logrus"
 
-	"github.com/hectane/hectane/internal/smtputil"
+	"github.com/lcd1232/hectane/internal/smtputil"
 )
 
 type SMTPError struct {

@@ -7,7 +7,7 @@ import (
 	"net/smtp"
 	"time"
 
-	"github.com/hectane/hectane/internal/smtputil"
+	"github.com/lcd1232/hectane/internal/smtputil"
 )
 
 type connector struct {

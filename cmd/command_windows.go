@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"github.com/hectane/go-acl"
-	"github.com/hectane/hectane/cfg"
-	"github.com/hectane/hectane/exec"
 	"github.com/kardianos/osext"
+	"github.com/lcd1232/hectane/cfg"
+	"github.com/lcd1232/hectane/exec"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"

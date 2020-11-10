@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/hectane/hectane/cfg"
+	"github.com/lcd1232/hectane/cfg"
 
 	"fmt"
 	"os"
