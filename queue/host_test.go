@@ -559,8 +559,8 @@ func TestRun(t *testing.T) {
 				message1 := saveMessage(t, "some body1", h.storage, "from1@example.org", []string{"to1@example.com"})
 				message2 := saveMessage(t, "some body2", h.storage, "from2@example.org", []string{"to2@example.com"})
 
-				h.newMessage.Insert(message1, 0)
-				h.newMessage.Insert(message2, 0)
+				h.newMessage.Insert(message1, time.Second)
+				h.newMessage.Insert(message2, 3*time.Second)
 
 				return &h, func() {
 					deleter()
