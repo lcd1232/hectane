@@ -57,6 +57,7 @@ type HostStatus struct {
 }
 
 type ProcessFunc func(m *Message, s *Storage) error
+type ProcessFailFunc func(m *Message, s *Storage, err error) error
 
 // Persistent connection to an SMTP host.
 type Host struct {
@@ -71,6 +72,7 @@ type Host struct {
 	stopFunc     context.CancelFunc
 	wg           *sync.WaitGroup
 	process      ProcessFunc
+	processFail  ProcessFailFunc
 
 	mailServerFinder MailServerFinder
 	smtpConnecter    smtputil.Connecter
@@ -214,7 +216,10 @@ receive:
 	if err := h.process(m, h.storage); err != nil {
 		var smtpErr *SMTPError
 		if errors.As(err, &smtpErr) && smtpErr.IsPermanent() {
-			h.log.WithError(err).Error("got permanent error")
+			h.log.WithError(err).Errorf("got permanent error: %v", err)
+			if err := h.processFail(m, h.storage, err); err != nil {
+				h.log.WithError(err).Errorf("failed to process failed message: %v", err)
+			}
 			goto cleanup
 		}
 		h.log.WithError(err).Error("failed to process message")
@@ -293,12 +298,16 @@ func NewHost(host string, s *Storage, c *Config) *Host {
 		stopFunc:         cancel,
 		wg:               &sync.WaitGroup{},
 		process:          c.ProcessFunc,
+		processFail:      c.ProcessFailFunc,
 		mailServerFinder: &dnsServerFinder{},
 		smtpConnecter:    newConnector(ctx, c.Hostname, c.DisableSSLVerification),
 		back:             &back,
 	}
 	if h.process == nil {
 		h.process = h.defaultProcessor
+	}
+	if h.processFail == nil {
+		h.processFail = noopFailProcess
 	}
 
 	h.wg.Add(1)

@@ -25,6 +25,8 @@ type Message struct {
 	From    string   `json:"from"`
 	To      []string `json:"to"`
 	Attempt int      `json:"attempt"`
+	// Metadata can store any data useful for custom processors.
+	Metadata map[string]string `json:"metadata"`
 }
 
 // Manager for message metadata and body on disk. All methods are safe to call

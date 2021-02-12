@@ -26,4 +26,6 @@ type Config struct {
 	DKIMConfigs map[string]DKIMConfig `json:"dkim-configs"`
 	// ProcessFunc allow you to define custom process function for message.
 	ProcessFunc ProcessFunc `json:"-"`
+	// ProcessFailFunc allow you to define processor if message failed with 5xx status.
+	ProcessFailFunc ProcessFailFunc `json:"-"`
 }
