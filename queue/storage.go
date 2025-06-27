@@ -64,6 +64,7 @@ func (s *Storage) loadMessages(body string) []*Message {
 				if err := os.Remove(path.Join(s.bodyDirectory(body), f.Name())); err != nil {
 					continue // Ignore errors, just skip this file.
 				}
+				continue // Skip this file, it is too old.
 			}
 			if strings.HasSuffix(f.Name(), messageExtension) {
 				m := &Message{
