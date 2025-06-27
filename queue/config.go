@@ -21,6 +21,8 @@ type Config struct {
 	MaxInterval            time.Duration `json:"-"`
 	MaxAttempts            int           `json:"max_attempts"`
 	Jitter                 bool          `json:"jitter"`
+	// MessageTTL is the time to live for messages when we're trying to load them.
+	MessageTTL time.Duration `json:"-"`
 
 	// Map domain names to DKIM config for that domain
 	DKIMConfigs map[string]DKIMConfig `json:"dkim-configs"`

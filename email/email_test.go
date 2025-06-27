@@ -58,7 +58,7 @@ func emailToMessages(e *Email) ([]*queue.Message, []byte, error) {
 		return nil, nil, err
 	}
 	defer os.RemoveAll(d)
-	s := queue.NewStorage(d)
+	s := queue.NewStorage(d, 0)
 	m, err := e.Messages(s)
 	if err != nil {
 		return nil, nil, err

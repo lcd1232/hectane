@@ -29,7 +29,7 @@ func newStorage(t *testing.T) (storage *Storage, deleter func()) {
 	d, err := ioutil.TempDir(os.TempDir(), "")
 	require.NoError(t, err)
 
-	storage = NewStorage(d)
+	storage = NewStorage(d, 0)
 	return storage, func() {
 		require.NoError(t, os.RemoveAll(d))
 	}

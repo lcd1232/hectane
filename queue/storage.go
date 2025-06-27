@@ -1,6 +1,8 @@
 package queue
 
 import (
+	"time"
+
 	"github.com/pborman/uuid"
 
 	"encoding/json"
@@ -34,6 +36,7 @@ type Message struct {
 type Storage struct {
 	m         sync.Mutex
 	directory string
+	ttl       time.Duration
 }
 
 // Determine the path to the directory containing the specified body.
@@ -56,6 +59,12 @@ func (s *Storage) loadMessages(body string) []*Message {
 	messages := make([]*Message, 0, 1)
 	if files, err := ioutil.ReadDir(s.bodyDirectory(body)); err == nil {
 		for _, f := range files {
+			if s.ttl > 0 && time.Since(f.ModTime()) > s.ttl {
+				// If the file is older than the TTL, delete it.
+				if err := os.Remove(path.Join(s.bodyDirectory(body), f.Name())); err != nil {
+					continue // Ignore errors, just skip this file.
+				}
+			}
 			if strings.HasSuffix(f.Name(), messageExtension) {
 				m := &Message{
 					id:   strings.TrimSuffix(f.Name(), messageExtension),
@@ -73,10 +82,12 @@ func (s *Storage) loadMessages(body string) []*Message {
 	return messages
 }
 
-// Create a Storage instance for the specified directory.
-func NewStorage(directory string) *Storage {
+// NewStorage creates a Storage instance for the specified directory.
+// TTL is the time to live for messages, after which they will be deleted.
+func NewStorage(directory string, ttl time.Duration) *Storage {
 	return &Storage{
 		directory: directory,
+		ttl:       ttl,
 	}
 }
 

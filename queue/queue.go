@@ -90,7 +90,7 @@ loop:
 func NewQueue(c *Config) (*Queue, error) {
 	q := &Queue{
 		config:     c,
-		Storage:    NewStorage(c.Directory),
+		Storage:    NewStorage(c.Directory, c.MessageTTL),
 		log:        logrus.WithField("context", "Queue"),
 		hosts:      make(map[string]*Host),
 		newMessage: make(chan *Message),
