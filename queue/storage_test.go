@@ -69,4 +69,26 @@ func TestStorageTTL(t *testing.T) {
 	messages, err = s.LoadMessages()
 	require.NoError(t, err)
 	assert.Len(t, messages, 0)
+	// Verify that the body directory was removed after all messages expired.
+	e, err := ioutil.ReadDir(s.directory)
+	require.NoError(t, err)
+	assert.Len(t, e, 0)
+}
+
+// TestStorageOrphanedDirectoryCleanup verifies that directories without a
+// body file (e.g. left by a crashed NewBody call) are removed by LoadMessages.
+func TestStorageOrphanedDirectoryCleanup(t *testing.T) {
+	d, err := ioutil.TempDir(os.TempDir(), "")
+	require.NoError(t, err)
+	defer os.RemoveAll(d)
+	s := NewStorage(d, 0)
+	// Simulate a partial NewBody failure by manually creating an empty directory.
+	orphan := s.bodyDirectory("orphaned-body-id")
+	require.NoError(t, os.MkdirAll(orphan, 0700))
+	_, err = s.LoadMessages()
+	require.NoError(t, err)
+	// The orphaned directory should have been removed.
+	e, err := ioutil.ReadDir(s.directory)
+	require.NoError(t, err)
+	assert.Len(t, e, 0)
 }

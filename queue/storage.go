@@ -6,6 +6,7 @@ import (
 	"github.com/pborman/uuid"
 
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -80,6 +81,12 @@ func (s *Storage) loadMessages(body string) []*Message {
 			}
 		}
 	}
+	// If all messages have been expired or no message files were found, clean
+	// up the entire body directory (including the body file) to avoid leaking
+	// directories that will never be used again.
+	if len(messages) == 0 {
+		os.RemoveAll(s.bodyDirectory(body))
+	}
 	return messages
 }
 
@@ -101,6 +108,7 @@ func (s *Storage) NewBody() (io.WriteCloser, string, error) {
 	}
 	w, err := os.OpenFile(s.bodyFilename(body), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
+		os.Remove(s.bodyDirectory(body))
 		return nil, "", err
 	}
 	return w, body, nil
@@ -121,6 +129,10 @@ func (s *Storage) LoadMessages() ([]*Message, error) {
 		if d.IsDir() {
 			if _, err := os.Stat(s.bodyFilename(d.Name())); err == nil {
 				messages = append(messages, s.loadMessages(d.Name())...)
+			} else {
+				// Directory exists but has no body file; remove it to avoid
+				// accumulating orphaned directories.
+				os.RemoveAll(s.bodyDirectory(d.Name()))
 			}
 		}
 	}
@@ -167,10 +179,10 @@ func (s *Storage) DeleteMessage(m *Message) error {
 	}
 	defer d.Close()
 	e, err := d.Readdir(2)
-	if err != nil {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
-	if len(e) == 1 {
+	if len(e) <= 1 {
 		return os.RemoveAll(s.bodyDirectory(m.body))
 	}
 	return nil
