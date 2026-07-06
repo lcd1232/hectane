@@ -108,7 +108,7 @@ func (s *Storage) NewBody() (io.WriteCloser, string, error) {
 	}
 	w, err := os.OpenFile(s.bodyFilename(body), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		os.Remove(s.bodyDirectory(body))
+		os.RemoveAll(s.bodyDirectory(body))
 		return nil, "", err
 	}
 	return w, body, nil

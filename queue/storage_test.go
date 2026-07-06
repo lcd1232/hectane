@@ -70,9 +70,9 @@ func TestStorageTTL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, messages, 0)
 	// Verify that the body directory was removed after all messages expired.
-	e, err := ioutil.ReadDir(s.directory)
+	entries, err := ioutil.ReadDir(s.directory)
 	require.NoError(t, err)
-	assert.Len(t, e, 0)
+	assert.Len(t, entries, 0)
 }
 
 // TestStorageOrphanedDirectoryCleanup verifies that directories without a
@@ -88,7 +88,7 @@ func TestStorageOrphanedDirectoryCleanup(t *testing.T) {
 	_, err = s.LoadMessages()
 	require.NoError(t, err)
 	// The orphaned directory should have been removed.
-	e, err := ioutil.ReadDir(s.directory)
+	entries, err := ioutil.ReadDir(s.directory)
 	require.NoError(t, err)
-	assert.Len(t, e, 0)
+	assert.Len(t, entries, 0)
 }
