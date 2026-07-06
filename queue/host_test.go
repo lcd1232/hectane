@@ -61,6 +61,7 @@ func TestHost_receiveMessage(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h.ctx = ctx
 	h.stopFunc = cancel
+	h.newMessage = dqueue.NewQueue()
 
 	require.True(t, h.lastActivity.IsZero())
 
@@ -347,7 +348,8 @@ func TestRun(t *testing.T) {
 						Hostname:               "forwarder1.example.org",
 						DisableSSLVerification: true,
 					},
-					back: &backoff.Backoff{},
+					back:        &backoff.Backoff{},
+					processFail: noopFailProcess,
 				}
 				h.process = h.defaultProcessor
 
@@ -424,7 +426,8 @@ func TestRun(t *testing.T) {
 						DisableSSLVerification: true,
 						MaxAttempts:            10,
 					},
-					back: &backoff.Backoff{},
+					back:        &backoff.Backoff{},
+					processFail: noopFailProcess,
 				}
 				h.process = h.defaultProcessor
 
@@ -477,7 +480,8 @@ func TestRun(t *testing.T) {
 						DisableSSLVerification: true,
 						MaxAttempts:            10,
 					},
-					back: &backoff.Backoff{},
+					back:        &backoff.Backoff{},
+					processFail: noopFailProcess,
 				}
 				h.process = h.defaultProcessor
 
@@ -553,6 +557,7 @@ func TestRun(t *testing.T) {
 						Min: time.Minute,
 						Max: 2 * time.Hour,
 					},
+					processFail: noopFailProcess,
 				}
 				h.process = h.defaultProcessor
 
