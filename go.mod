@@ -1,6 +1,6 @@
 module github.com/lcd1232/hectane
 
-go 1.14
+go 1.24
 
 require (
 	github.com/Freeaqingme/dkim v0.0.0-20160606200812-57418d2fbdcd
@@ -14,8 +14,16 @@ require (
 	github.com/lcd1232/dqueue v1.2.1
 	github.com/pborman/uuid v1.2.0
 	github.com/sirupsen/logrus v1.5.0
-	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.6.1
-	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/google/uuid v1.0.0 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/stretchr/objx v0.3.0 // indirect
+	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )

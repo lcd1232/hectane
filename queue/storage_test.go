@@ -1,7 +1,7 @@
 package queue
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -15,7 +15,7 @@ func TestStorage(t *testing.T) {
 		data        = []byte("test")
 		numMessages = 5
 	)
-	d, err := ioutil.TempDir(os.TempDir(), "")
+	d, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(d)
 	s := NewStorage(d, 0)
@@ -32,13 +32,13 @@ func TestStorage(t *testing.T) {
 	for _, m := range messages {
 		r, err := s.GetMessageBody(m)
 		require.NoError(t, err)
-		b, err := ioutil.ReadAll(r)
+		b, err := io.ReadAll(r)
 		require.NoError(t, err)
 		assert.Equal(t, data, b)
 		require.NoError(t, r.Close())
 		require.NoError(t, s.DeleteMessage(m))
 	}
-	e, err := ioutil.ReadDir(s.directory)
+	e, err := os.ReadDir(s.directory)
 	require.NoError(t, err)
 	if len(e) != 0 {
 		t.Fatalf("%d != 0", len(e))
@@ -50,7 +50,7 @@ func TestStorageTTL(t *testing.T) {
 		data        = []byte("test")
 		numMessages = 5
 	)
-	d, err := ioutil.TempDir(os.TempDir(), "")
+	d, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(d)
 	s := NewStorage(d, 10*time.Second)
@@ -70,7 +70,7 @@ func TestStorageTTL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, messages, 0)
 	// Verify that the body directory was removed after all messages expired.
-	entries, err := ioutil.ReadDir(s.directory)
+	entries, err := os.ReadDir(s.directory)
 	require.NoError(t, err)
 	assert.Len(t, entries, 0)
 }
@@ -78,7 +78,7 @@ func TestStorageTTL(t *testing.T) {
 // TestStorageOrphanedDirectoryCleanup verifies that directories without a
 // body file (e.g. left by a crashed NewBody call) are removed by LoadMessages.
 func TestStorageOrphanedDirectoryCleanup(t *testing.T) {
-	d, err := ioutil.TempDir(os.TempDir(), "")
+	d, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(d)
 	s := NewStorage(d, 0)
@@ -88,7 +88,7 @@ func TestStorageOrphanedDirectoryCleanup(t *testing.T) {
 	_, err = s.LoadMessages()
 	require.NoError(t, err)
 	// The orphaned directory should have been removed.
-	entries, err := ioutil.ReadDir(s.directory)
+	entries, err := os.ReadDir(s.directory)
 	require.NoError(t, err)
 	assert.Len(t, entries, 0)
 }

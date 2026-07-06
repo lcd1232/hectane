@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"strings"
@@ -128,7 +128,7 @@ func TestDKIMSigning(t *testing.T) {
 		Canonicalization: "relaxed/simple",
 	}
 
-	r := ioutil.NopCloser(bytes.NewBufferString(sampleMessage))
+	r := io.NopCloser(bytes.NewBufferString(sampleMessage))
 	signedEmail, err := dkimSigned(sampleFrom, r, &config)
 	if err != nil {
 		t.Fatal(err)
@@ -147,14 +147,14 @@ func TestDKIMSigning(t *testing.T) {
 func TestDKIMNotSigning(t *testing.T) {
 	dkimInstances = make(map[string]*dkim.DKIM)
 	config := Config{}
-	r := ioutil.NopCloser(bytes.NewBufferString(sampleMessage))
+	r := io.NopCloser(bytes.NewBufferString(sampleMessage))
 	signedEmail, err := dkimSigned(sampleFrom, r, &config)
 	if err != nil {
 		dkim, err2 := dkimFor(sampleFrom, &config)
 		t.Logf("dkim: %v / err2: %s", dkim, err2)
 		t.Fatal(err)
 	}
-	signedEmailContent, err := ioutil.ReadAll(signedEmail)
+	signedEmailContent, err := io.ReadAll(signedEmail)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"mime/multipart"
 	"net/mail"
@@ -53,7 +52,7 @@ func checkMultipart(r io.Reader, contentType string, d *multipartDesc) error {
 }
 
 func emailToMessages(e *Email) ([]*queue.Message, []byte, error) {
-	d, err := ioutil.TempDir(os.TempDir(), "")
+	d, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -70,7 +69,7 @@ func emailToMessages(e *Email) ([]*queue.Message, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, nil, err
 	}

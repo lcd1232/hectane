@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -58,9 +57,13 @@ func (s *Storage) messageFilename(m *Message) string {
 // Load all messages with the specified body.
 func (s *Storage) loadMessages(body string) []*Message {
 	messages := make([]*Message, 0, 1)
-	if files, err := ioutil.ReadDir(s.bodyDirectory(body)); err == nil {
+	if files, err := os.ReadDir(s.bodyDirectory(body)); err == nil {
 		for _, f := range files {
-			if s.ttl > 0 && time.Since(f.ModTime()) > s.ttl {
+			info, infoErr := f.Info()
+			if infoErr != nil {
+				continue
+			}
+			if s.ttl > 0 && time.Since(info.ModTime()) > s.ttl {
 				// If the file is older than the TTL, delete it.
 				if err := os.Remove(path.Join(s.bodyDirectory(body), f.Name())); err != nil {
 					continue // Ignore errors, just skip this file.
@@ -117,7 +120,7 @@ func (s *Storage) NewBody() (io.WriteCloser, string, error) {
 // Load messages from the storage directory. Any messages that could not be
 // loaded are ignored.
 func (s *Storage) LoadMessages() ([]*Message, error) {
-	directories, err := ioutil.ReadDir(s.directory)
+	directories, err := os.ReadDir(s.directory)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
