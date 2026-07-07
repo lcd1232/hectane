@@ -93,8 +93,10 @@ func (h *Host) receiveMessage() *Message {
 		h.m.Unlock()
 	}()
 	select {
-	case m := <-h.newMessage.Channel():
-		return m.(*Message)
+	case v := <-h.newMessage.Channel():
+		// The queue only ever holds *Message values.
+		msg, _ := v.(*Message)
+		return msg
 	case <-h.ctx.Done():
 		return nil
 	}

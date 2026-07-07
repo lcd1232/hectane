@@ -34,7 +34,8 @@ func Parse() (*Config, error) {
 	flag.StringVar(&c.API.Password, "password", "", "`password` for HTTP basic auth")
 	flag.BoolVar(&c.Log.Debug, "debug", false, "show debug log messages")
 	flag.StringVar(&c.Log.Logfile, "logfile", "", "`file` to write log output to")
-	flag.StringVar(&c.Queue.Directory, "directory", path.Join(os.TempDir(), "hectane"), "`directory` for persistent storage")
+	flag.StringVar(&c.Queue.Directory, "directory", path.Join(os.TempDir(), "hectane"),
+		"`directory` for persistent storage")
 	flag.BoolVar(&c.Queue.DisableSSLVerification, "disable-ssl-verification", false, "don't verify SSL certificates")
 	flag.StringVar(&c.SMTP.Addr, "smtp-addr", ":smtp", "`address` and port for SMTP server")
 	flag.IntVar(&c.SMTP.ReadTimeout, "read-timeout", 900, "`seconds` before client timeout")

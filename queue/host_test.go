@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/textproto"
 	"os"
 	"strings"
@@ -26,7 +25,7 @@ import (
 )
 
 func newStorage(t *testing.T) (storage *Storage, deleter func()) {
-	d, err := ioutil.TempDir(os.TempDir(), "")
+	d, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 
 	storage = NewStorage(d, 0)
@@ -57,8 +56,11 @@ func TestHost_receiveMessage(t *testing.T) {
 	defer deleter()
 
 	h := NewHost("example.com", store, new(Config))
-	// we stop processor so it cannot interrupt in our test
-	h.Stop()
+	// Stop only the processor goroutine so it can't consume our test message,
+	// but keep the message queue alive so Insert/receiveMessage still work.
+	// (h.Stop would also stop the queue, leaving receiveMessage blocked forever.)
+	h.stopFunc()
+	h.wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
 	h.ctx = ctx
 	h.stopFunc = cancel
@@ -71,6 +73,7 @@ func TestHost_receiveMessage(t *testing.T) {
 
 	m := h.receiveMessage()
 
+	require.NotNil(t, m)
 	assert.True(t, h.lastActivity.IsZero())
 	assert.Equal(t, "1", m.id)
 
@@ -91,7 +94,10 @@ func TestHost_receiveMessage_lastActivity(t *testing.T) {
 	}()
 
 	time.Sleep(10 * time.Millisecond)
-	assert.False(t, h.lastActivity.IsZero())
+	h.m.RLock()
+	lastActivity := h.lastActivity
+	h.m.RUnlock()
+	assert.False(t, lastActivity.IsZero())
 }
 
 func TestHost_parseHostname(t *testing.T) {
@@ -319,12 +325,16 @@ func TestRun(t *testing.T) {
 				})).Return(nil)
 				clientMock.On("Mail", "from@example.org").Return(nil)
 				clientMock.On("Rcpt", "to@example.com").Return(nil)
+				var (
+					dataWg  sync.WaitGroup
+					dataBuf bytes.Buffer
+					dataErr error
+				)
 				clientMock.On("Data").Run(func(args mock.Arguments) {
+					dataWg.Add(1)
 					go func() {
-						buf := bytes.Buffer{}
-						_, err := io.Copy(&buf, r)
-						require.NoError(t, err)
-						assert.Equal(t, "some body1", buf.String())
+						defer dataWg.Done()
+						_, dataErr = io.Copy(&dataBuf, r)
 					}()
 				}).Return(w, nil)
 				clientMock.On("Quit").Return(nil)
@@ -362,6 +372,9 @@ func TestRun(t *testing.T) {
 				}()
 
 				return &h, func() {
+					dataWg.Wait()
+					require.NoError(t, dataErr)
+					assert.Equal(t, "some body1", dataBuf.String())
 					deleter()
 					smtpConnecterMock.AssertExpectations(t)
 					clientMock.AssertExpectations(t)
@@ -375,8 +388,11 @@ func TestRun(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				r, w := io.Pipe()
 
-				wg := sync.WaitGroup{}
-				wg.Add(1)
+				var (
+					dataWg  sync.WaitGroup
+					dataBuf bytes.Buffer
+					dataErr error
+				)
 				temporaryError := textproto.Error{
 					Msg:  "Service is unavailable",
 					Code: 421,
@@ -396,12 +412,10 @@ func TestRun(t *testing.T) {
 				clientMock.On("Mail", "from@example.org").Return(nil)
 				clientMock.On("Rcpt", "to@example.com").Return(nil)
 				clientMock.On("Data").Run(func(args mock.Arguments) {
+					dataWg.Add(1)
 					go func() {
-						defer wg.Done()
-						buf := bytes.Buffer{}
-						_, err := io.Copy(&buf, r)
-						require.NoError(t, err)
-						assert.Equal(t, "some body1", buf.String())
+						defer dataWg.Done()
+						_, dataErr = io.Copy(&dataBuf, r)
 						cancel()
 					}()
 				}).Return(w, nil)
@@ -434,6 +448,9 @@ func TestRun(t *testing.T) {
 				h.newMessage.Insert(message, 0)
 
 				return &h, func() {
+					dataWg.Wait()
+					require.NoError(t, dataErr)
+					assert.Equal(t, "some body1", dataBuf.String())
 					deleter()
 					smtpConnecterMock.AssertExpectations(t)
 					clientMock.AssertExpectations(t)
@@ -522,12 +539,16 @@ func TestRun(t *testing.T) {
 				})).Return(nil)
 				clientMock.On("Mail", "from2@example.org").Return(nil)
 				clientMock.On("Rcpt", "to2@example.com").Return(nil)
+				var (
+					dataWg  sync.WaitGroup
+					dataBuf bytes.Buffer
+					dataErr error
+				)
 				clientMock.On("Data").Run(func(args mock.Arguments) {
+					dataWg.Add(1)
 					go func() {
-						buf := bytes.Buffer{}
-						_, err := io.Copy(&buf, r)
-						require.NoError(t, err)
-						assert.Equal(t, "some body2", buf.String())
+						defer dataWg.Done()
+						_, dataErr = io.Copy(&dataBuf, r)
 					}()
 				}).Return(w, nil)
 				clientMock.On("Quit").Return(nil)
@@ -564,6 +585,9 @@ func TestRun(t *testing.T) {
 				h.newMessage.Insert(message2, 3*time.Second)
 
 				return &h, func() {
+					dataWg.Wait()
+					require.NoError(t, dataErr)
+					assert.Equal(t, "some body2", dataBuf.String())
 					deleter()
 					smtpConnecterMock.AssertExpectations(t)
 					clientMock.AssertExpectations(t)
@@ -578,6 +602,12 @@ func TestRun(t *testing.T) {
 			require.NotNil(t, tc.beforeTest, "beforeTest must be implemented")
 			h, postFunc := tc.beforeTest(t)
 			defer postFunc()
+			// These test cases build Host literals directly instead of going
+			// through NewHost, so mirror its default so the permanent-error
+			// path doesn't dereference a nil processFail.
+			if h.processFail == nil {
+				h.processFail = noopFailProcess
+			}
 			h.run()
 		})
 	}

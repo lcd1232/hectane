@@ -1,14 +1,13 @@
 package cfg
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestSave(t *testing.T) {
-	d, err := ioutil.TempDir(os.TempDir(), "")
+	d, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}

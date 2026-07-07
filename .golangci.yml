@@ -1,0 +1,46 @@
+version: "2"
+linters:
+  enable:
+    - asciicheck
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errname
+    - forcetypeassert
+    - gocheckcompilerdirectives
+    - gocritic
+    - lll
+    - misspell
+    - prealloc
+    - rowserrcheck
+    - unconvert
+    - whitespace
+  disable:
+    - dupl
+    - goconst
+    - gosec
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - lll
+          - bodyclose
+          - prealloc
+          - forcetypeassert
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -7,7 +7,6 @@ import (
 
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -57,9 +56,13 @@ func (s *Storage) messageFilename(m *Message) string {
 // Load all messages with the specified body.
 func (s *Storage) loadMessages(body string) []*Message {
 	messages := make([]*Message, 0, 1)
-	if files, err := ioutil.ReadDir(s.bodyDirectory(body)); err == nil {
+	if files, err := os.ReadDir(s.bodyDirectory(body)); err == nil {
 		for _, f := range files {
-			if s.ttl > 0 && time.Since(f.ModTime()) > s.ttl {
+			info, err := f.Info()
+			if err != nil {
+				continue // File vanished between listing and stat; skip it.
+			}
+			if s.ttl > 0 && time.Since(info.ModTime()) > s.ttl {
 				// If the file is older than the TTL, delete it.
 				if err := os.Remove(path.Join(s.bodyDirectory(body), f.Name())); err != nil {
 					continue // Ignore errors, just skip this file.
@@ -80,7 +83,32 @@ func (s *Storage) loadMessages(body string) []*Message {
 			}
 		}
 	}
+	// Once no message files remain (e.g. they all expired) drop the whole body
+	// directory so empty directories don't pile up in the spool.
+	_ = s.removeBodyDirectoryIfEmpty(body)
 	return messages
+}
+
+// removeBodyDirectoryIfEmpty removes the body directory when it no longer holds
+// any message files. The body file itself does not count, so the directory is
+// cleaned up once every message sharing it has been delivered or expired. A
+// message file that is still on disk (even one that failed to load) keeps the
+// directory, so nothing pending is silently discarded here.
+func (s *Storage) removeBodyDirectoryIfEmpty(body string) error {
+	dir := s.bodyDirectory(body)
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), messageExtension) {
+			return nil
+		}
+	}
+	return os.RemoveAll(dir)
 }
 
 // NewStorage creates a Storage instance for the specified directory.
@@ -101,6 +129,8 @@ func (s *Storage) NewBody() (io.WriteCloser, string, error) {
 	}
 	w, err := os.OpenFile(s.bodyFilename(body), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
+		// MkdirAll already created the directory; don't leak it on failure.
+		_ = os.RemoveAll(s.bodyDirectory(body))
 		return nil, "", err
 	}
 	return w, body, nil
@@ -109,7 +139,7 @@ func (s *Storage) NewBody() (io.WriteCloser, string, error) {
 // Load messages from the storage directory. Any messages that could not be
 // loaded are ignored.
 func (s *Storage) LoadMessages() ([]*Message, error) {
-	directories, err := ioutil.ReadDir(s.directory)
+	directories, err := os.ReadDir(s.directory)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
@@ -118,10 +148,20 @@ func (s *Storage) LoadMessages() ([]*Message, error) {
 	}
 	var messages []*Message
 	for _, d := range directories {
-		if d.IsDir() {
-			if _, err := os.Stat(s.bodyFilename(d.Name())); err == nil {
-				messages = append(messages, s.loadMessages(d.Name())...)
-			}
+		if !d.IsDir() {
+			continue
+		}
+		_, err := os.Stat(s.bodyFilename(d.Name()))
+		switch {
+		case err == nil:
+			messages = append(messages, s.loadMessages(d.Name())...)
+		case os.IsNotExist(err):
+			// The directory has no body file (e.g. a crashed NewBody). It can
+			// never be delivered, so remove it instead of scanning it forever.
+			_ = os.RemoveAll(s.bodyDirectory(d.Name()))
+		default:
+			// Any other error (I/O, permissions) is transient; leave the
+			// directory untouched rather than risk deleting valid messages.
 		}
 	}
 	return messages, nil
@@ -146,7 +186,7 @@ func (s *Storage) SaveMessage(m *Message, body string) error {
 	return nil
 }
 
-// Retreive a reader for the message body.
+// Retrieve a reader for the message body.
 func (s *Storage) GetMessageBody(m *Message) (io.ReadCloser, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -161,17 +201,5 @@ func (s *Storage) DeleteMessage(m *Message) error {
 	if err := os.Remove(s.messageFilename(m)); err != nil {
 		return err
 	}
-	d, err := os.Open(s.bodyDirectory(m.body))
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	e, err := d.Readdir(2)
-	if err != nil {
-		return err
-	}
-	if len(e) == 1 {
-		return os.RemoveAll(s.bodyDirectory(m.body))
-	}
-	return nil
+	return s.removeBodyDirectoryIfEmpty(m.body)
 }
