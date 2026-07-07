@@ -11,7 +11,8 @@ import (
 // The link RegExp is adapted from http://stackoverflow.com/a/3809435/193619.
 var (
 	replaceCRLF  = regexp.MustCompile(`\r?\n`)
-	replaceLinks = regexp.MustCompile(`https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&//=]*)`)
+	replaceLinks = regexp.MustCompile(`https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}` +
+		`\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&//=]*)`)
 )
 
 // Group a list of email addresses by their host. An error will be returned if

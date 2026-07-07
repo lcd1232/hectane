@@ -8,8 +8,6 @@ import (
 
 	"fmt"
 
-	"io/ioutil"
-
 	"github.com/Freeaqingme/dkim"
 )
 
@@ -62,7 +60,7 @@ func dkimSigned(from string, input io.ReadCloser, config *Config) (io.ReadCloser
 	}
 	// TODO: Do not load the content
 	defer input.Close()
-	email, err := ioutil.ReadAll(input)
+	email, err := io.ReadAll(input)
 	if err != nil {
 		return nil, fmt.Errorf("error while ReadAll: %s", err)
 	}
@@ -70,5 +68,5 @@ func dkimSigned(from string, input io.ReadCloser, config *Config) (io.ReadCloser
 	if err != nil {
 		return nil, fmt.Errorf("error while signing the email: %s", err)
 	}
-	return ioutil.NopCloser(bytes.NewReader(signedEmail)), nil
+	return io.NopCloser(bytes.NewReader(signedEmail)), nil
 }

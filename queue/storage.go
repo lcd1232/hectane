@@ -7,7 +7,6 @@ import (
 
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -57,9 +56,13 @@ func (s *Storage) messageFilename(m *Message) string {
 // Load all messages with the specified body.
 func (s *Storage) loadMessages(body string) []*Message {
 	messages := make([]*Message, 0, 1)
-	if files, err := ioutil.ReadDir(s.bodyDirectory(body)); err == nil {
+	if files, err := os.ReadDir(s.bodyDirectory(body)); err == nil {
 		for _, f := range files {
-			if s.ttl > 0 && time.Since(f.ModTime()) > s.ttl {
+			info, err := f.Info()
+			if err != nil {
+				continue // File vanished between listing and stat; skip it.
+			}
+			if s.ttl > 0 && time.Since(info.ModTime()) > s.ttl {
 				// If the file is older than the TTL, delete it.
 				if err := os.Remove(path.Join(s.bodyDirectory(body), f.Name())); err != nil {
 					continue // Ignore errors, just skip this file.
@@ -93,7 +96,7 @@ func (s *Storage) loadMessages(body string) []*Message {
 // directory, so nothing pending is silently discarded here.
 func (s *Storage) removeBodyDirectoryIfEmpty(body string) error {
 	dir := s.bodyDirectory(body)
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -136,7 +139,7 @@ func (s *Storage) NewBody() (io.WriteCloser, string, error) {
 // Load messages from the storage directory. Any messages that could not be
 // loaded are ignored.
 func (s *Storage) LoadMessages() ([]*Message, error) {
-	directories, err := ioutil.ReadDir(s.directory)
+	directories, err := os.ReadDir(s.directory)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
@@ -183,7 +186,7 @@ func (s *Storage) SaveMessage(m *Message, body string) error {
 	return nil
 }
 
-// Retreive a reader for the message body.
+// Retrieve a reader for the message body.
 func (s *Storage) GetMessageBody(m *Message) (io.ReadCloser, error) {
 	s.m.Lock()
 	defer s.m.Unlock()

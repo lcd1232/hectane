@@ -4,10 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"io/ioutil"
-	"testing"
-
+	"io"
 	"strings"
+	"testing"
 
 	"github.com/Freeaqingme/dkim"
 )
@@ -93,11 +92,12 @@ func findDkimHeader(r *bufio.Reader) (string, error) {
 			break
 		}
 
-		if line[0] == ' ' || line[0] == '\t' {
+		switch {
+		case line[0] == ' ' || line[0] == '\t':
 			if dkimState == 1 {
 				value += line
 			}
-		} else if dkimState == 0 {
+		case dkimState == 0:
 			kv = strings.SplitN(line, ":", 2)
 			// skip invalid header
 			if len(kv) == 2 {
@@ -106,7 +106,7 @@ func findDkimHeader(r *bufio.Reader) (string, error) {
 					dkimState = 1
 				}
 			}
-		} else {
+		default:
 			dkimState = 2
 		}
 	}
@@ -128,7 +128,7 @@ func TestDKIMSigning(t *testing.T) {
 		Canonicalization: "relaxed/simple",
 	}
 
-	r := ioutil.NopCloser(bytes.NewBufferString(sampleMessage))
+	r := io.NopCloser(bytes.NewBufferString(sampleMessage))
 	signedEmail, err := dkimSigned(sampleFrom, r, &config)
 	if err != nil {
 		t.Fatal(err)
@@ -147,14 +147,14 @@ func TestDKIMSigning(t *testing.T) {
 func TestDKIMNotSigning(t *testing.T) {
 	dkimInstances = make(map[string]*dkim.DKIM)
 	config := Config{}
-	r := ioutil.NopCloser(bytes.NewBufferString(sampleMessage))
+	r := io.NopCloser(bytes.NewBufferString(sampleMessage))
 	signedEmail, err := dkimSigned(sampleFrom, r, &config)
 	if err != nil {
 		dkim, err2 := dkimFor(sampleFrom, &config)
 		t.Logf("dkim: %v / err2: %s", dkim, err2)
 		t.Fatal(err)
 	}
-	signedEmailContent, err := ioutil.ReadAll(signedEmail)
+	signedEmailContent, err := io.ReadAll(signedEmail)
 	if err != nil {
 		t.Fatal(err)
 	}

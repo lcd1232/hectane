@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/textproto"
 	"os"
 	"strings"
@@ -26,7 +25,7 @@ import (
 )
 
 func newStorage(t *testing.T) (storage *Storage, deleter func()) {
-	d, err := ioutil.TempDir(os.TempDir(), "")
+	d, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 
 	storage = NewStorage(d, 0)
